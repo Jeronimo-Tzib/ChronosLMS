@@ -430,14 +430,41 @@ export default function Dashboard() {
 
   const deleteBook = async (isbn: string) => {
     try {
+      // First delete any loan records associated with the book
+      const { error: loanError } = await supabase
+        .from('loan')
+        .delete()
+        .eq('isbn', isbn)
+
+      if (loanError) throw loanError
+
+      // Then delete the book-category relationships
+      const { error: categoryError } = await supabase
+        .from('book_category')
+        .delete()
+        .eq('isbn', isbn)
+
+      if (categoryError) throw categoryError
+
+      // Then delete the book-author relationships
+      const { error: authorError } = await supabase
+        .from('book_author')
+        .delete()
+        .eq('isbn', isbn)
+
+      if (authorError) throw authorError
+
+      // Finally delete the book itself
       const { error } = await supabase
         .from('book')
         .delete()
         .eq('isbn', isbn)
 
       if (error) throw error
+      
       toast.success('Book deleted successfully')
       await fetchBooks()
+      await fetchLoans() // Add this to refresh the loans list
     } catch (error) {
       console.error('Error deleting book:', error)
       toast.error('Failed to delete book')
